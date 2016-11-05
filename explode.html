@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<title>Explode</title>
+
+<style>
+canvas {
+    background: black;
+}
+</style>
+
+<canvas width="500" height="500"></canvas>
+
+<script src="explode.js"></script>
+
+<script>
+
+window.onload = function() {
+    var canvas = document.getElementsByTagName('canvas')[0];
+    var ctx = canvas.getContext('2d');
+
+    var w = canvas.width;
+    var h = canvas.height;
+
+    var sprites = [];
+    for (var i = 0; i < 100; i++) {
+        var explode = new Explode();
+        var x = w*Math.random();
+        var y = h*Math.random();
+        sprites.push({ explode: explode, x: x, y: y });
+    }
+
+    (function loop() {
+
+        ctx.save();
+        ctx.clearRect(0, 0, w, h);
+
+        if (sprites) {
+            sprites.forEach(function(sprite) {
+                var explode = sprite.explode;
+                if (!explode.engaged) return;
+                explode.draw(ctx, sprite.x, sprite.y);
+                if (!explode.update()) {
+                    explode.reset();
+                }
+            });
+        }
+
+        ctx.restore();
+
+        requestAnimationFrame(loop);
+    })();
+};
+
+</script>

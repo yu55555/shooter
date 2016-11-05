@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<title>Bullets shooter</title>
+
+<style>
+canvas {
+    background: black;
+}
+</style>
+
+<!-- http://taira-komori.jpn.org/sound/ -->
+<audio id="shotAudio">
+  <source src="laser2.mp3">
+  Your WEB browser does not support audio tag.
+</audio>
+<audio id="explosionAudio">
+  <source src="explosion1.mp3">
+  Your WEB browser does not support audio tag.
+</audio>
+<audio id="enemyShotAudio">
+  <source src="pyo1.mp3">
+  Your WEB browser does not support audio tag.
+</audio>
+<audio id="deadAudio">
+  <source src="destruction1.mp3">
+  Your WEB browser does not support audio tag.
+</audio>
+
+<!-- http://dova-s.jp/bgm/play5046.html -->
+<audio id="bgmAudio">
+  <source src="5046.mp3">
+  Your WEB browser does not support audio tag.
+</audio>
+
+<canvas width="500" height="600"></canvas>
+
+<script src="explode.js"></script>
+
+<script>
+
+"use strict";
+
+var shotAudio = document.getElementById('shotAudio');
+var explosionAudio = document.getElementById('explosionAudio');
+var enemyShotAudio = document.getElementById('enemyShotAudio');
+var deadAudio = document.getElementById('deadAudio');
+var bgmAudio = document.getElementById('bgmAudio');
+var muteSE = true;
+
+function playSE(audio) {
+    if (muteSE) return;
+    audio.currentTime = 0;
+    audio.play();
+}
+
+var bgReady = false;
+var bgImg = new Image();
+bgImg.onload = function() {
+    bgReady = true;
+    bgImg.src = 'haikei.jpg';
+};
+// https://www.nasa.gov/mission_pages/hubble/multimedia/index.html
+//bgImg.src = 'haikei.jpg';
+
+//var bgImg = new Image();
+//bgImg.src = 'Boss.jpg';
+//var Boss = (
+
+bgmAudio.loop = 'true';
+bgmAudio.play();
+
+function Enemy(canvas) {
+
+    var x, y;
+    var vx, vy;
+
+    var life = 3;
+    var dying = false;
+    var explode = new Explode();
+
+    var bullets = [];
+
+    var er = 23; // enemy radius
+    var br = 5; // bullet radius
+
+    function spawn() {
+        x = canvas.width*Math.random();
+        y = -er;
+        vx = 0;
+        vy = 100*Math.random() + 50;
+    };
+    spawn();
+
+    var lifeProp = [];
+    lifeProp[3] = { color: 'green',  fireP: 0.001, numB:  5, daze: 2 };
+    lifeProp[2] = { color: 'yellow', fireP: 0.005, numB: 10, daze: 3 };
+    lifeProp[1] = { color: 'red',    fireP: 0.01,  numB: 15, daze: 6 };
+
+    //document.write('<imag src = Boss.jpg');
+
+    this.draw = function(ctx) {
+        if (dying) {
+            explode.draw(ctx, x, y);
+        } else if (1 <= life) {
+            ctx.beginPath();
+            ctx.fillStyle = lifeProp[life].color;
+            ctx.arc(x, y, er, 0, Math.PI*2, false);
+            ctx.fill();
+        }
+
+        bullets.forEach(function(bullet) {
+            var x = bullet.x;
+            var y = bullet.y;
+            ctx.beginPath();
+            ctx.fillStyle = 'hsl(' + 360*bullet.life + ', 100%, 50%)';
+            ctx.arc(x, y, br, 0, Math.PI*2, false);
+            ctx.fill();
+        });
+    };
+
+    this.fire = function() {
+        var n = lifeProp[life].numB;
+        for (var i = 0; i < n; i++) {
+            var th = i*2*Math.PI/n;
+            var vx = 300*Math.sin(th);
+            var vy = 300*Math.tan(th);
+            var bullet = { x: x, y: y, vx: vx, vy: vy, life: 1 };
+            bullets.push(bullet);
+        }
+        playSE(enemyShotAudio);
+    };
+
+    this.fireAtRandom = function() {
+        if (Math.random() < lifeProp[life].fireP) {
+            this.fire();
+            return true;
+        }
+        return false;
+    };
+
+    this.hit = function(tx, ty, r) {
+        var dx = tx - x;
+        var dy = ty - y;
+        if (dx*dx + dy*dy < (er + r)*(er + r)) {
+            return true;
+        }
+        return false;
+    };
+
+    this.bulletsHit = function(tx, ty, r) {
+        for (var i = 0; i < bullets.length; i++) {
+            var bullet = bullets[i];
+            var dx = tx - bullet.x;
+            var dy = ty - bullet.y;
+            if (dx*dx + dy*dy < (br + r)*(br + r)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+
+function Boss()
+{
+    this.image = new Image();   // ボス画像
+    this.image.src = "Boss.png";
+    this.width = 66;   // ボスの幅
+    this.height = 95;   // ボスの高さ
+    var a  = 100 + Math.floor((mp.canvas.width - 200 - this.width) * Math.random());
+    this.x = a;   // ボスの位置(横)
+    var b  = 10 + Math.floor(20 * Math.random());
+    this.y = b;   // ボスの位置(縦)
+    // 行動パターンの設定
+    this.ct = 1;
+    this.ptn1 = new Array();
+    this.ptn1[0] = new Array(-5, 0, 50);
+    this.ptn1[1] = new Array(0, 20, 55);
+    this.ptn1[2] = new Array(5, 0, 105);
+    this.ptn1[3] = new Array(0, -20, 110);
+    this.ptn2 = new Array();
+    this.ptn2[0] = new Array(5, 0, 50);
+    this.ptn2[1] = new Array(0, 20, 55);
+    this.ptn2[2] = new Array(-5, 0, 105);
+    this.ptn2[3] = new Array(0, -20, 110);
+    this.ptn = new Array();
+    if (this.x > mp.canvas.width/2-this.width/2)
+    this.ptn = this.ptn1;
+    else
+    this.ptn = this.ptn2;
+    return this;
+}
+Boss.prototype.move = function()
+{
+    // 移動
+    gp.bs.ct++;
+    if (gp.bs.ct > 110)
+    gp.bs.ct = 1;
+    // ボスの位置
+    var k = -1;
+    for (var i1 = 0; i1 < gp.bs.ptn.length-1 && k < 0; i1++) {
+     			if (gp.bs.ct <= gp.bs.ptn[i1][2])
+                k = i1;
+    }
+    if (k < 0)
+    k = gp.bs.ptn.length - 1;
+    gp.bs.x += gp.bs.ptn[k][0];
+    gp.bs.y += gp.bs.ptn[k][1];
+    // 敵機の位置
+    if (gp.ex[0]) {
+     			gp.em[0].x += gp.bs.ptn[k][0];
+                gp.em[0].y += gp.bs.ptn[k][1];
+    }
+    if (gp.ex[1]) {
+     			gp.em[1].x += gp.bs.ptn[k][0];
+                gp.em[1].y += gp.bs.ptn[k][1];
+    }
+}
+
+function Enemy(sw, bs)
+{
+    this.image = new Image();   // 敵機画像
+    this.image.src = "image/enemy.gif";
+    this.width = 27;   // 敵機の幅
+    this.height = 41;   // 敵機の高さ
+    this.x;   // ボスの位置(横)
+    this.y;   // ボスの位置(縦)
+    // 敵機の初期位置
+    if (sw == 0) {
+     			this.x = bs.x - 150 + Math.floor(100 * Math.random());
+                this.y = bs.y + bs.height - 80 + Math.floor(100 * Math.random());
+    }
+    else {
+     			this.x = bs.x + bs.width + 50 + Math.floor(100 * Math.random());
+                this.y = bs.y + bs.height - 80 + Math.floor(100 * Math.random());
+    }
+    return this;
+}
+
+
+
+    var lastTick;
+    var th = Math.PI*Math.random();
+
+    this.update = function() {
+
+        if (dying && !explode.update()) {
+            dying = false;
+        }
+
+        if (lastTick == undefined) {
+            lastTick = Date.now();
+        }
+
+        var tick = Date.now();
+        var dt = tick - lastTick;
+        if (0 < life) {
+            x += dt*vx/1000;
+            x += lifeProp[life].daze*Math.cos(th);
+            th += 1.5*dt*2*Math.PI/1000;
+            y += dt*vy/1000;
+            if (x < -er
+            || canvas.width + er < x
+            || canvas.height + er < y) {
+                spawn();
+            }
+        }
+        bullets.forEach(function(bullet) {
+            bullet.x += dt*bullet.vx/1000;
+            bullet.y += dt*bullet.vy/1000;
+            bullet.life -= dt/1000/1.0;
+        });
+
+        bullets = bullets.filter(function(bullet) {
+            return 0 < bullet.life;
+        });
+        lastTick = tick;
+    };
+
+    this.die = function() {
+        dying = true;
+        playSE(explosionAudio);
+        explode.reset();
+    };
+
+    this.damage = function() {
+        if (--life <= 0) {
+            this.die();
+        } else {
+            this.fire();
+        }
+    };
+
+    this.isAlive = function() {
+        return 1 <= life;
+    };
+}
+
+var enemies;
+
+function init(canvas, n) {
+    enemies = [];
+    for (var i = 0; i < n; i++) {
+        enemies.push(new Enemy(canvas));
+    }
+}
+
+window.onload = function() {
+
+    var canvas = document.getElementsByTagName('canvas')[0];
+    var ctx = canvas.getContext('2d');
+
+    var w = canvas.width;
+    var h = canvas.height;
+
+    var Status = { title:0, toStart:1, countDown:2,
+                   inGame:3, gameClear:4, dying:5, gameOver:6 };
+    var status = Status.title;
+
+    var count;
+    var myX, myY;
+    var bullets, lastShoot;
+    var explode = new Explode();
+    var numEnemies;
+
+    var keys = [];
+    document.onkeydown = function(e) {
+        if (!keys[e.keyCode]) keys[e.keyCode] = 0;
+        keys[e.keyCode]++;
+    };
+    document.onkeyup = function(e) {
+        keys[e.keyCode] = 0;
+    };
+
+    var startTick = Date.now();
+
+    (function loop() {
+
+        var tick = Date.now();
+
+        ctx.save();
+        ctx.clearRect(0, 0, w, h);
+
+        if (bgReady) {
+            var sx = (bgImg.width - canvas.width)/2;
+            var dy = (tick - startTick)/100 % bgImg.height;
+
+            ctx.drawImage(bgImg,
+                sx, 0, canvas.width, canvas.height - dy,
+                0, dy, canvas.width, canvas.height - dy);
+
+            ctx.drawImage(bgImg,
+                sx, bgImg.height - dy, canvas.width, dy,
+                0, 0, canvas.width, dy);
+        }
+     
+
+
+        if (keys[32 /*space*/] == 1) {
+            if (status == Status.title) {
+                status = Status.toStart;
+                muteSE = false;
+            }
+            if (status == Status.gameOver) {
+                status = Status.title;
+            }
+            if (status == Status.gameClear) {
+                status = Status.toStart;
+                muteSE = false;
+            }
+            keys[32]++; // pretend key repeat
+        }
+
+        var msg;
+        var drawEnemies = false;
+        var drawPlayer = false;
+        var drawStatus = false;
+
+        switch (status) {
+        case Status.title:
+            msg = 'Press space to start';
+            numEnemies = 3;
+            break;
+        case Status.toStart:
+            myX = canvas.width/2;
+            myY = 4*canvas.height/5;
+            bullets = [];
+            init(canvas, numEnemies);
+            status = Status.countDown;
+            count = 3;
+            (function() {
+                setTimeout(function loop() {
+                    if (--count < 0) {
+                        status = Status.inGame;
+                    } else {
+                        setTimeout(loop, 1000);
+                    }
+                }, 1000);
+            })();
+            //break; // intentionally fall through
+        case Status.countDown:
+            msg = "" + count;
+            drawPlayer = true;
+            drawStatus = true;
+            break;
+        case Status.inGame:
+            drawEnemies = true;
+            drawPlayer = true;
+            drawStatus = true;
+            break;
+        case Status.gameClear:
+            msg = 'GAME CLEAR!!!';
+            drawEnemies = true;
+            drawPlayer = true;
+            drawStatus = true;
+            break;
+        case Status.dying:
+            explode.draw(ctx, myX, myY);
+            if (!explode.update()) {
+                status = Status.gameOver;
+                muteSE = true;
+            }
+            drawEnemies = true;
+            drawStatus = true;
+            break;
+        case Status.gameOver:
+            msg = 'GAME OVER';
+            drawEnemies = true;
+            drawStatus = true;
+            break;
+        default:
+            console.log('unknown status: ' + status);
+        }
+
+        if (drawPlayer) {
+            if (keys[39 /*Right*/]) { myX += 4; }
+            if (keys[37 /*Left */]) { myX -= 4; }
+            if (keys[38 /*Up   */]) { myY -= 4; }
+            if (keys[40 /*Down */]) { myY += 4; }
+            if (keys[90 /* z */]) {
+                if (lastShoot == undefined || 200 < tick - lastShoot) {
+                    var bulletNotInUse = bullets.filter(function(bullet) {
+                        return !bullet.inUse;
+                    });
+                    var bullet;
+                    if (0 < bulletNotInUse.length) {
+                        bullet = bulletNotInUse[0];
+                    } else {
+                        bullet = {};
+                        bullets.push(bullet);
+                    }
+                    bullet.x = myX;
+                    bullet.y = myY;
+                    bullet.v = -2;
+                    bullet.inUse = true;
+                    playSE(shotAudio);
+                    lastShoot = tick;
+                }
+            }
+        }
+
+        var myR = 3;
+
+        drawEnemies && enemies.forEach(function(enemy) {
+            enemy.update();
+            if (enemy.isAlive()) {
+                enemy.fireAtRandom();
+            }
+            enemy.draw(ctx);
+            if (status != Status.inGame) return;
+            if ((enemy.isAlive() && enemy.hit(myX, myY, myR))
+            || enemy.bulletsHit(myX, myY, myR)) {
+                explode.reset();
+                status = Status.dying;
+                playSE(deadAudio);
+            }
+        });
+
+        if (drawPlayer) {
+            ctx.beginPath();
+            ctx.fillStyle = 'green';
+            ctx.moveTo(myX, myY - 10);
+            ctx.lineTo(myX + 10, myY + 10);
+            ctx.lineTo(myX - 10, myY + 10);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.fillStyle = 'red';
+            ctx.arc(myX, myY, myR, 0, Math.PI*2, false);
+            ctx.fill();
+        }
+
+     
+     
+        bullets && bullets.forEach(function(bullet) {
+            if (!bullet.inUse) return;
+
+            ctx.beginPath();
+            ctx.fillStyle = 'red';
+            var x = bullet.x;
+            var y = bullet.y;
+            ctx.arc(x, y, 5, 0, Math.PI*2, false);
+            ctx.fill();
+            drawEnemies && enemies.forEach(function(enemy) {
+                if (enemy.isAlive() && enemy.hit(x, y, 2)) {
+                    enemy.damage();
+                    bullet.inUse = false;
+                }
+            });
+            bullet.y += bullet.v;
+            if (bullet.y < 0) {
+                bullet.inUse = false;
+            }
+        });
+
+        if (drawStatus) {
+            var remainingEnemies = enemies.filter(function(enemy) {
+                return enemy.isAlive();
+            }).length;
+            if (status == Status.inGame && remainingEnemies <= 0) {
+                status = Status.gameClear;
+                muteSE = true;
+                numEnemies++;
+            }
+            ctx.font = '20pt Calibri';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            var s = "enemie(s): " + remainingEnemies;
+            ctx.fillText(s, canvas.width - 10, 0);
+        }
+
+        if (msg) {
+            ctx.font = '40pt Calibri';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(msg, canvas.width/2, canvas.height/2);
+        }
+
+        ctx.restore();
+
+        requestAnimationFrame(loop);
+    })();
+};
+
+</script>
